@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "applest-atem": "^0.2.4",
+    "atem-connection": "^2.2.2",
+    "node-osc": "^5.2.2",
+    "rpio": "^2.4.0"
+  },
+  "name": "atemsave",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT"
+}

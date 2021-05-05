@@ -1,0 +1,150 @@
+//switched to cutTransition just for fun
+//runs super fast once the node server is up
+//button press needs testing - rpio library throwing errors
+//so that has highest priority now
+//other than that we're fine, readline for testing right now
+
+var rpio = require('rpio');
+var ATEM = require('applest-atem');
+const readline = require('readline');
+const rl = readline.createInterface({
+	input: process.stdin,
+	output: process.stdout
+});
+
+
+rpio.init({
+	gpiomem: false,
+	mapping: 'physical',
+	mock: undefined,
+	close_on_exit: true,
+});
+
+recurse();
+
+
+//global variable to store active channel
+let activechannel = 1;
+
+
+var atem = new ATEM();
+
+const randomInt = () => Math.floor((Math.random() * 4) + 1);
+
+atem.connect('192.168.10.240');
+
+
+atem.on('connect', function() {
+	doStuff();
+});
+
+
+function recurse() {
+
+	rl.question("what ?", function(num){
+	if(num){
+	doNum(num);
+	} else {doStuff()};
+	recurse();
+	});
+
+}
+
+
+//this one for no user input
+function doStuff() {
+	atem.changeProgramInput(randomInt());
+	atem.changePreviewInput(randomInt());
+	atem.cutTransition();
+	atem.changeProgramInput(3,1);
+}
+
+//this one for user input
+function doNum(num) {
+
+	if(num > 0 && num < 5){
+		atem.changeProgramInput(num);
+		atem.changePreviewInput(num);
+		atem.cutTransition();
+		atem.changeProgramInput(3,1);
+		pulseLED(num-1); //zero index so we subtract 1 
+	} else console.log('bad number, broski');
+}
+
+rpio.open(15, rpio.INPUT, rpio.PULL_UP);
+
+function pollcb(pin)
+{
+	rpio.msleep(120);
+	if (rpio.read(pin))
+		return;
+	console.log('Button pressed on pin P%d', pin);
+	doStuff();
+
+}
+
+rpio.poll(15, pollcb, rpio.POLL_LOW);
+
+
+
+//PWM section - note that PWM requires root privileges 
+//so as a first step we should write a quick test routine
+//to see whether the service has those privileges
+//note: only pins 12,32,33,35 are PWM enabled
+//and gpiomem:false needs to be set (somewhere)
+//SUCCESS!!! we have root privileges with our service
+
+
+rpio.open(12, rpio.PWM); /*use pin 12 for pwm */
+rpio.open(32, rpio.PWM); /* etc... */
+rpio.open(33, rpio.PWM);
+rpio.open(35, rpio.PWM);
+
+
+
+//encapsulating the following into a function
+
+//pray that it works i guess....
+//we'll call this function elsewhere with a lookup array to map the pin numbers
+
+
+
+function pulseLED(channelnumber)
+{
+
+var pinmap = [12,32,33,35];
+
+if(pinmap[channelnumber]){
+	pin = pinmap[channelnumber];
+} else { return;}
+
+var times = 1;
+var direction = 1;
+var data = 0;
+var interval = 5;
+var max = 128;
+var pulse = setInterval(function() {
+	rpio.pwmSetData(pin,data);
+	if (data === 0) {
+		direction = 1;
+		if (times-- === 0) {
+			clearInterval(pulse);
+			rpio.open(pin,rpio.INPUT);
+			return;
+		}
+	} else if (data === max) {
+		direction = -1;
+	}
+	data += direction;
+}, interval, data, direction, times);
+}
+
+
+/*
+ *atem.on('stateChanged', function(err, state) {
+ *  console.log(state); // catch the ATEM state.
+ *});
+ */
+
+
+

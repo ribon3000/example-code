@@ -1,0 +1,19 @@
+[Unit]
+Description=My Sample Service
+After=network.target
+
+
+[Service]
+WorkingDirectory=/home/pi/atemsave
+ExecStart=/usr/bin/node --expose-gc /home/pi/atemsave/atemtest.js
+Restart=on-abort
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=atem
+User=root
+Group=root
+
+
+
+[Install]
+WantedBy=multi-user.target
